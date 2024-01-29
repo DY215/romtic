@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Romantic Starry Sky</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Kaushan+Script&display=swap');
+
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      position: relative;
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    .title {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 2.5em;
+      font-family: 'Kaushan Script', cursive;
+      color: rgba(255, 255, 255, 0.5);
+      mix-blend-mode: screen;
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+      animation: fadeInOut 5s infinite;
+    }
+    .poem {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      font-family: 'Kaushan Script', cursive;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 1.5em;
+      opacity: 0;
+      animation: fadeIn 2s 1.5s forwards;
+    }
+
+    @keyframes fadeInOut {
+      0%, 100% {
+        opacity: 0;
+      }
+      50% {
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="starsCanvas"></canvas>
+  <div class="title">Romantic Starry Sky</div>
+  <div class="poem">
+    <p>星河如梦织银网，</p>
+    <p>夜空璀璨似宝匣。</p>
+    <p>万千星辰闪烁处，</p>
+    <p>思绪如云漫天涯。</p>
+  </div>
+  <script>
+    const canvas = document.getElementById('starsCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const stars = [];
+    const numStars = 200;
+
+    for (let i = 0; i < numStars; i++) {
+      const x = Math.random() * canvas.width;
+      const y = Math.random() * canvas.height;
+      const radius = Math.random() * 2;
+      const speed = 0.2 + Math.random() * 0.5;
+      stars.push({ x, y, radius, speed });
+    }
+
+    function drawStars() {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      for (let i = 0; i < numStars; i++) {
+        const star = stars[i];
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function moveStars() {
+      for (let i = 0; i < numStars; i++) {
+        const star = stars[i];
+        star.x += star.speed;
+        if (star.x > canvas.width) {
+          star.x = 0;
+        }
+      }
+    }
+
+    function blinkStars() {
+      for (let i = 0; i < numStars; i++) {
+        const star = stars[i];
+        star.radius += Math.random() * 0.2 - 0.1;
+        if (star.radius < 0) {
+          star.radius = 0;
+        } else if (star.radius > 2) {
+          star.radius = 2;
+        }
+      }
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      moveStars();
+      drawStars();
+      blinkStars();
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
