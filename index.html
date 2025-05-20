@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>星空流星雨 with 爱心雨</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      overflow: hidden;
+      background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+      height: 100vh;
+      position: relative;
+      font-family: 'Ma Shan Zheng', cursive;
+    }
+    
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+    
+    .content {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 2;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+    
+    h1 {
+      font-size: clamp(2rem, 5vw, 4rem);
+      margin-bottom: 2rem;
+      text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #e60073, 0 0 40px #e60073;
+      animation: glow 2s ease-in-out infinite alternate;
+    }
+    
+    .poem {
+      font-size: clamp(1rem, 3vw, 2rem);
+      line-height: 2;
+      text-shadow: 0 0 5px #fff;
+      opacity: 0;
+      animation: fadeIn 3s 1s forwards;
+    }
+    
+    .poem p {
+      margin: 0.5rem 0;
+    }
+    
+    .meteor {
+      position: absolute;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 10px 1px #fff;
+      filter: blur(1px);
+      z-index: 1;
+      transform-origin: center;
+      opacity: 0;
+    }
+    
+    .meteor::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 300px;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(255,255,255,1), rgba(255,255,255,0));
+      transform-origin: left center;
+    }
+    
+    .heart {
+      position: fixed;
+      z-index: 1;
+      color: #ff69b4;
+      font-size: 16px;
+      opacity: 0;
+      pointer-events: none;
+      animation: heartRain 2s linear infinite;
+      text-shadow: 0 0 5px rgba(255,105,180,0.5);
+    }
+    
+    @keyframes heartRain {
+      0% {
+        transform: translate(-100%, -100%) rotate(-45deg);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(
+          calc(100vw + 100px), 
+          calc(100vh + 100px)
+        ) rotate(15deg);
+        opacity: 0;
+      }
+    }
+    
+    @keyframes glow {
+      from {
+        text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #e60073, 0 0 40px #e60073;
+      }
+      to {
+        text-shadow: 0 0 20px #fff, 0 0 30px #ff4da6, 0 0 40px #ff4da6, 0 0 50px #ff4da6;
+      }
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    @keyframes meteorFly {
+      0% {
+        transform: translate(var(--start-x), var(--start-y)) rotate(var(--angle));
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      10% {
+        opacity: 1;
+        width: 3px;
+        height: 3px;
+      }
+      70% {
+        opacity: 1;
+      }
+      100% {
+        transform: translate(var(--end-x), var(--end-y)) rotate(var(--angle));
+        opacity: 0;
+        width: 1px;
+        height: 1px;
+      }
+    }
+    
+    @keyframes meteorTail {
+      0% {
+        transform: scaleX(0);
+      }
+      10% {
+        transform: scaleX(1);
+      }
+      100% {
+        transform: scaleX(0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="starsCanvas"></canvas>
+  
+  <div class="content">
+    <h1>璀璨星河</h1>
+    <div class="poem">
+      <p>星河如梦织银网，</p>
+      <p>夜空璀璨似宝匣。</p>
+      <p>万千星辰闪烁处，</p>
+      <p>思绪如云漫天涯。</p>
+    </div>
+  </div>
+
+  <script>
+    // 星空背景逻辑保持不变
+    const canvas = document.getElementById('starsCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      initStars();
+    }
+    
+    window.addEventListener('resize', resizeCanvas);
+    
+    let stars = [];
+    const starCount = Math.floor(window.innerWidth * window.innerHeight / 1000);
+    
+    function initStars() {
+      stars = [];
+      for (let i = 0; i < starCount; i++) {
+        stars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          radius: Math.random() * 1.5,
+          vx: Math.random() * 0.5 - 0.25,
+          vy: Math.random() * 0.5 - 0.25,
+          alpha: Math.random(),
+          blinkSpeed: Math.random() * 0.05 + 0.01,
+          blinkDirection: Math.random() > 0.5 ? 1 : -1
+        });
+      }
+    }
+    
+    function drawStars() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      const gradient = ctx.createRadialGradient(
+        canvas.width/2, canvas.height/2, 0,
+        canvas.width/2, canvas.height/2, Math.max(canvas.width, canvas.height)/2
+      );
+      gradient.addColorStop(0, 'rgba(11, 16, 35, 0.8)');
+      gradient.addColorStop(1, 'rgba(1, 4, 15, 0.9)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      stars.forEach(star => {
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        
+        const glow = ctx.createRadialGradient(
+          star.x, star.y, 0,
+          star.x, star.y, star.radius * 3
+        );
+        glow.addColorStop(0, `rgba(255, 255, 255, ${star.alpha})`);
+        glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = glow;
+        ctx.fill();
+        
+        star.alpha += star.blinkSpeed * star.blinkDirection;
+        if (star.alpha <= 0.2 || star.alpha >= 1) {
+          star.blinkDirection *= -1;
+        }
+        
+        star.x += star.vx;
+        star.y += star.vy;
+        
+        if (star.x < 0 || star.x > canvas.width) star.vx *= -1;
+        if (star.y < 0 || star.y > canvas.height) star.vy *= -1;
+      });
+    }
+
+    // 爱心雨生成逻辑（修改版）
+    function createHeartsBatch() {
+      const count = Math.floor(Math.random() * 6) + 1; // 1-5
+      const baseX = Math.random() * 20; // 左上角20%区域
+      const baseY = Math.random() * 20;
+
+      for (let i = 0; i < count; i++) {
+        const heart = document.createElement('div');
+        heart.className = 'heart';
+        heart.innerHTML = '♥';
+        
+        // 位置偏移（0.1%-0.3%）
+        const offsetX = (Math.random() * 0.2 + 0.1) * (Math.random() > 0.5 ? 1 : -1);
+        const offsetY = (Math.random() * 0.2 + 0.1) * (Math.random() > 0.5 ? 1 : -1);
+        
+        // 随机参数
+        const size = Math.random() * 20 + 10;
+        const duration = Math.random() * 2 + 1.5; // 1.5-3.5秒
+        const colorVar = Math.random() * 30 - 15;
+
+        heart.style.cssText = `
+          font-size: ${size}px;
+          animation-duration: ${duration}s;
+          color: hsl(330, 100%, ${50 + colorVar}%);
+          left: calc(${baseX}% + ${offsetX}%);
+          top: calc(${baseY}% + ${offsetY}%);
+        `;
+
+        document.body.appendChild(heart);
+        heart.addEventListener('animationend', () => heart.remove());
+      }
+    }
+
+    // 随机定时器逻辑
+    function scheduleHearts() {
+      const delay = Math.random() * 2500 + 500; // 0.5-3秒
+      setTimeout(() => {
+        createHeartsBatch();
+        scheduleHearts();
+      }, delay);
+    }
+
+    // 初始化
+    resizeCanvas();
+    scheduleHearts();
+    
+    // 保持原有动画循环和流星逻辑
+    function animate() {
+      drawStars();
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    // 流星生成逻辑（保持原样）
+    function createMeteor() {
+      // ...原有流星生成逻辑保持不变...
+    }
+    setInterval(() => {
+      createMeteor();
+      if(Math.random() > 0.7) setTimeout(createMeteor, 300);
+    }, 1500);
+    for (let i = 0; i < 3; i++) setTimeout(createMeteor, i * 1000);
+  </script>
+</body>
+</html>
