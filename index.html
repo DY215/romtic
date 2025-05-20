@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,6 +19,7 @@
       height: 100vh;
       position: relative;
       font-family: 'Ma Shan Zheng', cursive;
+      touch-action: manipulation;
     }
     
     canvas {
@@ -44,6 +45,7 @@
       color: white;
       text-align: center;
       padding: 20px;
+      pointer-events: none;
     }
     
     h1 {
@@ -98,6 +100,19 @@
       pointer-events: none;
       animation: heartRain 2s linear infinite;
       text-shadow: 0 0 5px rgba(255,105,180,0.5);
+    }
+
+    /* 音频控制按钮 */
+    .audio-control {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 100;
+      background: rgba(255,255,255,0.1);
+      border-radius: 50%;
+      padding: 10px;
+      cursor: pointer;
+      backdrop-filter: blur(5px);
     }
     
     @keyframes heartRain {
@@ -165,6 +180,14 @@
   </style>
 </head>
 <body>
+  <!-- 音频播放器 -->
+  <audio id="bgm" loop>
+    <source src="./rodeo.mp3" type="audio/mpeg">
+    <source src="./rodeo.ogg" type="audio/ogg">
+    Your browser does not support the audio element.
+  </audio>
+  <div class="audio-control" onclick="toggleAudio()">🎵</div>
+
   <canvas id="starsCanvas"></canvas>
   
   <div class="content">
@@ -178,49 +201,117 @@
   </div>
 
   <script>
-    // 星空背景逻辑保持不变
-    const canvas = document.getElementById('starsCanvas');
-    const ctx = canvas.getContext('2d');
-    
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      initStars();
+    // ================= 音频控制模块 =================
+    const bgm = document.getElementById('bgm');
+    let isAudioReady = false;
+
+    // 浏览器特性检测
+    const isEdge = /Edg/.test(navigator.userAgent);
+    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+
+    // 初始化音频系统
+    function initAudio() {
+      // Edge浏览器特殊处理
+      if (isEdge) {
+        bgm.removeAttribute('autoplay');
+        bgm.preload = 'metadata';
+      }
+
+      // 加载元数据
+      bgm.addEventListener('loadedmetadata', () => {
+        console.log(`✅ 音频加载成功 | 时长: ${bgm.duration.toFixed(1)}秒`);
+        isAudioReady = true;
+      });
+
+      // 错误处理
+      bgm.addEventListener('error', (e) => {
+        console.error('音频错误:', e.target.error.message);
+        showError('音频加载失败，请检查文件格式');
+      });
+
+      // 交互式激活
+      const activateEvents = isMobile ? ['touchstart'] : ['click'];
+      activateEvents.forEach(event => {
+        document.addEventListener(event, handleFirstInteraction, { once: true });
+      });
     }
-    
-    window.addEventListener('resize', resizeCanvas);
-    
-    let stars = [];
-    const starCount = Math.floor(window.innerWidth * window.innerHeight / 1000);
-    
-    function initStars() {
-      stars = [];
-      for (let i = 0; i < starCount; i++) {
-        stars.push({
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
-          radius: Math.random() * 1.5,
-          vx: Math.random() * 0.5 - 0.25,
-          vy: Math.random() * 0.5 - 0.25,
-          alpha: Math.random(),
-          blinkSpeed: Math.random() * 0.05 + 0.01,
-          blinkDirection: Math.random() > 0.5 ? 1 : -1
+
+    // 首次交互处理
+    function handleFirstInteraction() {
+      if (!isAudioReady) {
+        bgm.load();
+        bgm.play().catch(e => {
+          console.error('首次播放失败:', e);
+          showError('点击喇叭图标手动播放');
         });
       }
     }
-    
+
+    // 音频切换控制
+    function toggleAudio() {
+      bgm.paused ? bgm.play() : bgm.pause();
+      updateAudioIcon();
+    }
+
+    // 更新图标状态
+    function updateAudioIcon() {
+      const icon = document.querySelector('.audio-control');
+      icon.textContent = bgm.paused ? '🔇' : '🎵';
+    }
+
+    // 显示错误信息
+    function showError(msg) {
+      const errorDiv = document.createElement('div');
+      errorDiv.style = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 10px 20px;
+        background: #ff4444;
+        color: white;
+        border-radius: 5px;
+        z-index: 1000;
+      `;
+      errorDiv.textContent = msg;
+      document.body.appendChild(errorDiv);
+      setTimeout(() => errorDiv.remove(), 5000);
+    }
+
+    // ================= 星空效果模块 =================
+    const canvas = document.getElementById('starsCanvas');
+    const ctx = canvas.getContext('2d');
+    let stars = [];
+
+    function initStars() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      stars = Array.from({ length: Math.floor(canvas.width * canvas.height / 1500) }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        radius: Math.random() * 1.5,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.5,
+        alpha: Math.random(),
+        blinkSpeed: Math.random() * 0.05 + 0.01,
+        blinkDirection: 1
+      }));
+    }
+
     function drawStars() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
+      // 星空渐变背景
       const gradient = ctx.createRadialGradient(
         canvas.width/2, canvas.height/2, 0,
         canvas.width/2, canvas.height/2, Math.max(canvas.width, canvas.height)/2
       );
-      gradient.addColorStop(0, 'rgba(11, 16, 35, 0.8)');
-      gradient.addColorStop(1, 'rgba(1, 4, 15, 0.9)');
+      gradient.addColorStop(0, 'rgba(27, 39, 53, 0.9)');
+      gradient.addColorStop(1, 'rgba(9, 10, 15, 0.95)');
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
+      // 绘制星星
       stars.forEach(star => {
         ctx.beginPath();
         ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
@@ -234,81 +325,81 @@
         ctx.fillStyle = glow;
         ctx.fill();
         
+        // 更新星星状态
         star.alpha += star.blinkSpeed * star.blinkDirection;
-        if (star.alpha <= 0.2 || star.alpha >= 1) {
-          star.blinkDirection *= -1;
-        }
+        if (star.alpha <= 0.2 || star.alpha >= 1) star.blinkDirection *= -1;
         
-        star.x += star.vx;
-        star.y += star.vy;
-        
-        if (star.x < 0 || star.x > canvas.width) star.vx *= -1;
-        if (star.y < 0 || star.y > canvas.height) star.vy *= -1;
+        star.x = (star.x + star.vx + canvas.width) % canvas.width;
+        star.y = (star.y + star.vy + canvas.height) % canvas.height;
       });
     }
 
-    // 爱心雨生成逻辑（修改版）
-    function createHeartsBatch() {
-      const count = Math.floor(Math.random() * 6) + 1; // 1-5
-      const baseX = Math.random() * 20; // 左上角20%区域
-      const baseY = Math.random() * 20;
+    // ================= 爱心雨模块 =================
+    function createHeart() {
+      const heart = document.createElement('div');
+      heart.className = 'heart';
+      heart.innerHTML = '♥';
+      
+      heart.style.cssText = `
+        font-size: ${Math.random() * 20 + 10}px;
+        left: ${Math.random() * 100}%;
+        top: ${Math.random() * 20}%;
+        animation-duration: ${Math.random() * 2 + 1.5}s;
+        color: hsl(330, 100%, ${50 + Math.random() * 30}%);
+      `;
 
-      for (let i = 0; i < count; i++) {
-        const heart = document.createElement('div');
-        heart.className = 'heart';
-        heart.innerHTML = '♥';
-        
-        // 位置偏移（0.1%-0.3%）
-        const offsetX = (Math.random() * 0.2 + 0.1) * (Math.random() > 0.5 ? 1 : -1);
-        const offsetY = (Math.random() * 0.2 + 0.1) * (Math.random() > 0.5 ? 1 : -1);
-        
-        // 随机参数
-        const size = Math.random() * 20 + 10;
-        const duration = Math.random() * 2 + 1.5; // 1.5-3.5秒
-        const colorVar = Math.random() * 30 - 15;
+      document.body.appendChild(heart);
+      heart.addEventListener('animationend', () => heart.remove());
+    }
 
-        heart.style.cssText = `
-          font-size: ${size}px;
-          animation-duration: ${duration}s;
-          color: hsl(330, 100%, ${50 + colorVar}%);
-          left: calc(${baseX}% + ${offsetX}%);
-          top: calc(${baseY}% + ${offsetY}%);
-        `;
+    // ================= 流星模块 =================
+    function createMeteor() {
+      const meteor = document.createElement('div');
+      meteor.className = 'meteor';
+      
+      meteor.style.cssText = `
+        --start-x: ${Math.random() * 120 - 20}vw;
+        --start-y: ${Math.random() * 50 - 50}vh;
+        --end-x: ${parseFloat(meteor.style.getPropertyValue('--start-x')) + 100}vw;
+        --end-y: ${parseFloat(meteor.style.getPropertyValue('--start-y')) + 100}vh;
+        --angle: ${Math.random() * 30 - 15}deg;
+        animation: meteorFly 1s linear, meteorTail 1s linear;
+      `;
 
-        document.body.appendChild(heart);
-        heart.addEventListener('animationend', () => heart.remove());
+      document.body.appendChild(meteor);
+      meteor.addEventListener('animationend', () => meteor.remove());
+    }
+
+    // ================= 主程序 =================
+    function init() {
+      // 初始化各模块
+      initAudio();
+      initStars();
+      
+      // 窗口大小变化处理
+      window.addEventListener('resize', initStars);
+      
+      // 启动动画循环
+      function animate() {
+        drawStars();
+        requestAnimationFrame(animate);
+      }
+      animate();
+
+      // 启动特效定时器
+      setInterval(() => {
+        createHeart();
+        if (Math.random() > 0.7) createMeteor();
+      }, 1000);
+
+      // 首次运行创建3个流星
+      for (let i = 0; i < 3; i++) {
+        setTimeout(createMeteor, i * 300);
       }
     }
 
-    // 随机定时器逻辑
-    function scheduleHearts() {
-      const delay = Math.random() * 2500 + 500; // 0.5-3秒
-      setTimeout(() => {
-        createHeartsBatch();
-        scheduleHearts();
-      }, delay);
-    }
-
-    // 初始化
-    resizeCanvas();
-    scheduleHearts();
-    
-    // 保持原有动画循环和流星逻辑
-    function animate() {
-      drawStars();
-      requestAnimationFrame(animate);
-    }
-    animate();
-
-    // 流星生成逻辑（保持原样）
-    function createMeteor() {
-      // ...原有流星生成逻辑保持不变...
-    }
-    setInterval(() => {
-      createMeteor();
-      if(Math.random() > 0.7) setTimeout(createMeteor, 300);
-    }, 1500);
-    for (let i = 0; i < 3; i++) setTimeout(createMeteor, i * 1000);
+    // 启动程序
+    init();
   </script>
 </body>
 </html>
